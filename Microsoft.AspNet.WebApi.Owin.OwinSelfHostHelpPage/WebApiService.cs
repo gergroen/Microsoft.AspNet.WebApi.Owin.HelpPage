@@ -50,42 +50,57 @@ namespace Microsoft.AspNet.WebApi.Owin.OwinSelfHostHelpPage
             IApiExplorer apiExplorer = config.Services.GetApiExplorer();
             XDocument xml = XDocument.Load("Microsoft.AspNet.WebApi.Owin.OwinSelfHostHelpPage.XML");
 
+            HttpControllerDescriptor previousControllerDescriptor = null;
             Console.WriteLine();
             Console.WriteLine();
             Console.WriteLine();
             foreach (ApiDescription api in apiExplorer.ApiDescriptions)
             {
-                var member = ((ReflectedHttpActionDescriptor)api.ActionDescriptor).MethodInfo;
-                var memberElementName = GetMemberElementName(member);
-                var description = xml.XPathEvaluate($"string(/doc/members/member[@name='{memberElementName}']/summary)").ToString().Trim();
+                if (previousControllerDescriptor == null || !previousControllerDescriptor.Equals(api.ActionDescriptor.ControllerDescriptor))
+                {
+                    previousControllerDescriptor = api.ActionDescriptor.ControllerDescriptor;
+                    var controllerMemberElementName = GetMemberElementName(previousControllerDescriptor.ControllerType);
+                    var controllerDescription = xml.XPathEvaluate($"string(/doc/members/member[@name='{controllerMemberElementName}']/summary)").ToString().Trim();
+                    Console.WriteLine();
+                    Console.WriteLine();
+                    Console.WriteLine();
+                    Console.WriteLine($"|============================================================================");
+                    Console.WriteLine($"|Controller {previousControllerDescriptor.ControllerName}");
+                    Console.WriteLine($"|-Description: {controllerDescription}");
+                    Console.WriteLine($"|============================================================================");
+                }
+                var actionMember = ((ReflectedHttpActionDescriptor)api.ActionDescriptor).MethodInfo;
+                var actionMemberElementName = GetMemberElementName(actionMember);
+                var description = xml.XPathEvaluate($"string(/doc/members/member[@name='{actionMemberElementName}']/summary)").ToString().Trim();
+                Console.WriteLine($"|");
                 Console.WriteLine($"|============================================================================");
-                Console.WriteLine($"|{api.HttpMethod} {api.RelativePath}");
-                Console.WriteLine($"|============================================================================");
-                Console.WriteLine($"|Description: {description}");
+                Console.WriteLine($"|Action {api.HttpMethod} {api.RelativePath}");
+                Console.WriteLine($"|-Description: {description}");
                 Console.WriteLine($"|============================================================================");
                 foreach (ApiParameterDescription parameter in api.ParameterDescriptions)
                 {
-                    var parameterDescription = xml.XPathEvaluate($"string(/doc/members/member[@name='{memberElementName}']/param[@name='{parameter.Name}'])").ToString().Trim();
-                    Console.WriteLine($"|Parameter name: {parameter.Name}");
-                    Console.WriteLine($"|Parameter source: {parameter.Source}");
-                    Console.WriteLine($"|Parameter description: {parameterDescription}");
+                    var parameterDescription = xml.XPathEvaluate($"string(/doc/members/member[@name='{actionMemberElementName}']/param[@name='{parameter.Name}'])").ToString().Trim();
+                    Console.WriteLine($"|Parameter {parameter.Name}");
+                    Console.WriteLine($"|-Description: {parameterDescription}");
+                    Console.WriteLine($"|-Type: {parameter.ParameterDescriptor.ParameterType.FullName}");
+                    Console.WriteLine($"|-Source: {parameter.Source}");
                     Console.WriteLine($"|============================================================================");
                 }
-                var returns = xml.XPathEvaluate($"string(/doc/members/member[@name='{memberElementName}']/returns)").ToString().Trim();
-                Console.WriteLine($"|Returns: {returns}");
+                var returns = xml.XPathEvaluate($"string(/doc/members/member[@name='{actionMemberElementName}']/returns)").ToString().Trim();
+                Console.WriteLine($"|Return");
+                Console.WriteLine($"|-Description: {returns}");
+                Console.WriteLine($"|-Type: {actionMember.ReturnType.FullName}");
                 Console.WriteLine($"|============================================================================");
-                Console.WriteLine();
-                Console.WriteLine();
-                Console.WriteLine();
             }
+            Console.WriteLine();
+            Console.WriteLine();
+            Console.WriteLine();
         }
 
         public string GetMemberElementName(MemberInfo member)
         {
             char prefixCode;
-            string memberName = (member is Type)
-                ? ((Type)member).FullName 
-    : (member.DeclaringType.FullName + "." + member.Name);
+            string memberName = (member is Type) ? ((Type)member).FullName  : (member.DeclaringType.FullName + "." + member.Name);
 
             switch (member.MemberType)
             {
