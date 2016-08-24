@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Microsoft.AspNet.WebApi.Owin.HelpPage")]
+[assembly: AssemblyTitle("Microsoft.AspNet.WebApi.Owin.OwinSelfHostHelpPage")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("Microsoft.AspNet.WebApi.Owin.HelpPage")]
+[assembly: AssemblyProduct("Microsoft.AspNet.WebApi.Owin.OwinSelfHostHelpPage")]
 [assembly: AssemblyCopyright("Copyright ©  2016")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("8ceb2629-43d6-49e7-913f-7893cbd2b414")]
+[assembly: Guid("6c3763c8-f42f-4445-adb9-4d007647f759")]
 
 // Version information for an assembly consists of the following four values:
 //
