@@ -1,13 +1,9 @@
 ﻿using Microsoft.Owin.Hosting;
 using Owin;
 using System;
-using System.Linq;
-using System.Reflection;
 using System.Web.Http;
-using System.Web.Http.Controllers;
-using System.Web.Http.Description;
-using System.Xml.Linq;
-using System.Xml.XPath;
+using WebApplication1.Areas.HelpPage;
+using Microsoft.AspNet.WebApi.Owin.HelpPage.WebApiDocumentation;
 
 namespace Microsoft.AspNet.WebApi.Owin.OwinSelfHostHelpPage
 {
@@ -39,6 +35,8 @@ namespace Microsoft.AspNet.WebApi.Owin.OwinSelfHostHelpPage
         {
             Console.WriteLine("Configure Web API for self-host");
             HttpConfiguration config = new HttpConfiguration();
+            config.SetDocumentationProvider(new XmlDocumentationProvider("Microsoft.AspNet.WebApi.Owin.OwinSelfHostHelpPage.XML"));
+
             config.Routes.MapHttpRoute(
                 name: "DefaultApi",
                 routeTemplate: "api/{controller}/{action}/{id}",
@@ -46,96 +44,50 @@ namespace Microsoft.AspNet.WebApi.Owin.OwinSelfHostHelpPage
             );
             appBuilder.UseWebApi(config);
 
-
-            IApiExplorer apiExplorer = config.Services.GetApiExplorer();
-            XDocument xml = XDocument.Load("Microsoft.AspNet.WebApi.Owin.OwinSelfHostHelpPage.XML");
-
-            HttpControllerDescriptor previousControllerDescriptor = null;
-            Console.WriteLine();
-            Console.WriteLine();
-            Console.WriteLine();
-            foreach (ApiDescription api in apiExplorer.ApiDescriptions)
-            {
-                if (previousControllerDescriptor == null || !previousControllerDescriptor.Equals(api.ActionDescriptor.ControllerDescriptor))
-                {
-                    previousControllerDescriptor = api.ActionDescriptor.ControllerDescriptor;
-                    var controllerMemberElementName = GetMemberElementName(previousControllerDescriptor.ControllerType);
-                    var controllerDescription = xml.XPathEvaluate($"string(/doc/members/member[@name='{controllerMemberElementName}']/summary)").ToString().Trim();
-                    Console.WriteLine();
-                    Console.WriteLine();
-                    Console.WriteLine();
-                    Console.WriteLine($"|============================================================================");
-                    Console.WriteLine($"|Controller {previousControllerDescriptor.ControllerName}");
-                    Console.WriteLine($"|-Description: {controllerDescription}");
-                    Console.WriteLine($"|============================================================================");
-                }
-                var actionMember = ((ReflectedHttpActionDescriptor)api.ActionDescriptor).MethodInfo;
-                var actionMemberElementName = GetMemberElementName(actionMember);
-                var description = xml.XPathEvaluate($"string(/doc/members/member[@name='{actionMemberElementName}']/summary)").ToString().Trim();
-                Console.WriteLine($"|");
-                Console.WriteLine($"|============================================================================");
-                Console.WriteLine($"|Action {api.HttpMethod} {api.RelativePath}");
-                Console.WriteLine($"|-Description: {description}");
-                Console.WriteLine($"|============================================================================");
-                foreach (ApiParameterDescription parameter in api.ParameterDescriptions)
-                {
-                    var parameterDescription = xml.XPathEvaluate($"string(/doc/members/member[@name='{actionMemberElementName}']/param[@name='{parameter.Name}'])").ToString().Trim();
-                    Console.WriteLine($"|Parameter {parameter.Name}");
-                    Console.WriteLine($"|-Description: {parameterDescription}");
-                    Console.WriteLine($"|-Type: {parameter.ParameterDescriptor.ParameterType.FullName}");
-                    Console.WriteLine($"|-Source: {parameter.Source}");
-                    Console.WriteLine($"|============================================================================");
-                }
-                var returns = xml.XPathEvaluate($"string(/doc/members/member[@name='{actionMemberElementName}']/returns)").ToString().Trim();
-                Console.WriteLine($"|Return");
-                Console.WriteLine($"|-Description: {returns}");
-                Console.WriteLine($"|-Type: {actionMember.ReturnType.FullName}");
-                Console.WriteLine($"|============================================================================");
-            }
-            Console.WriteLine();
-            Console.WriteLine();
-            Console.WriteLine();
+            var documatation = config.GetWebApiDocumentation();
+            CreateConsoleWebApiDocumentation(documatation);
         }
 
-        public string GetMemberElementName(MemberInfo member)
+        private static void CreateConsoleWebApiDocumentation(WebApiDocumentation documatation)
         {
-            char prefixCode;
-            string memberName = (member is Type) ? ((Type)member).FullName  : (member.DeclaringType.FullName + "." + member.Name);
-
-            switch (member.MemberType)
+            Console.WriteLine();
+            Console.WriteLine();
+            Console.WriteLine();
+            foreach (var controllerDocumentation in documatation.Controllers)
             {
-                case MemberTypes.Constructor:
-                    memberName = memberName.Replace(".ctor", "#ctor");
-                    goto case MemberTypes.Method;
-                case MemberTypes.Method:
-                    prefixCode = 'M';
-                    string paramTypesList = String.Join(
-                        ",",
-                        ((MethodBase)member).GetParameters()
-                            .Cast<ParameterInfo>()
-                            .Select(x => x.ParameterType.FullName
-                        ).ToArray()
-                    );
-                    if (!String.IsNullOrEmpty(paramTypesList)) memberName += "(" + paramTypesList + ")";
-                    break;
+                Console.WriteLine();
+                Console.WriteLine();
+                Console.WriteLine();
+                Console.WriteLine($"|============================================================================");
+                Console.WriteLine($"|Controller {controllerDocumentation.Name}");
+                Console.WriteLine($"|-Description: {controllerDocumentation.Description}");
+                Console.WriteLine($"|============================================================================");
 
-                case MemberTypes.Event: prefixCode = 'E'; break;
-                case MemberTypes.Field: prefixCode = 'F'; break;
+                foreach (var actionDocumentation in controllerDocumentation.Actions)
+                {
+                    Console.WriteLine($"|");
+                    Console.WriteLine($"|============================================================================");
+                    Console.WriteLine($"|Action {actionDocumentation.HttpMethod} {actionDocumentation.RelativePath}");
+                    Console.WriteLine($"|-Description: {actionDocumentation.Description}");
+                    Console.WriteLine($"|============================================================================");
+                    foreach (var parameterDocumentation in actionDocumentation.Parameters)
+                    {
+                        Console.WriteLine($"|Parameter {parameterDocumentation.Name}");
+                        Console.WriteLine($"|-Description: {parameterDocumentation.Description}");
+                        Console.WriteLine($"|-Type: {parameterDocumentation.Type.FullName}");
+                        Console.WriteLine($"|-Source: {parameterDocumentation.Source}");
+                        Console.WriteLine($"|============================================================================");
+                    }
 
-                case MemberTypes.NestedType:
-                    memberName = memberName.Replace('+', '.');
-                    goto case MemberTypes.TypeInfo;
-                case MemberTypes.TypeInfo:
-                    prefixCode = 'T';
-                    break;
-
-                case MemberTypes.Property: prefixCode = 'P'; break;
-
-                default:
-                    throw new ArgumentException("Unknown member type", "member");
+                    Console.WriteLine($"|Return");
+                    Console.WriteLine($"|-Description: {actionDocumentation.ResponseDescription}");
+                    Console.WriteLine($"|-Type: {actionDocumentation.ResponseType.FullName}");
+                    Console.WriteLine($"|============================================================================");
+                }
             }
-
-            return String.Format("{0}:{1}", prefixCode, memberName);
+            Console.WriteLine();
+            Console.WriteLine();
+            Console.WriteLine();
         }
     }
 }
